@@ -17,13 +17,13 @@ game = DoomGame()
 game.load_config("./final+sc.cfg")
 game.init()
 
-resolution = (200, 160)
+resolution = (160, 120)
 
 actions = [[False,False, False]]
 episodes=1000000
 sleep_time=0.5
-learning_rate=1e-5
-conv_outdim=11040
+learning_rate=1e-3
+conv_outdim=6256
 Likelihood_map_dim=5*8
 Likelihood_angel_dim=72
 
@@ -37,14 +37,14 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(1, 8, kernel_size=9, stride=3)
         self.conv2 = nn.Conv2d(8, 16, kernel_size=6, stride=2)
-        self.conv3 = nn.Conv2d(16, 16, kernel_size=3, stride=1)
+        self.drop = nn.Dropout2d(p=0.3)
         self.loca_fc1 = nn.Linear(conv_outdim, Likelihood_map_dim)
         self.ang_fc1 = nn.Linear(conv_outdim, Likelihood_angel_dim)
         self.softmax=nn.Softmax()
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
+        x = self.drop(F.relu(self.conv2(x)))
         x = x.view(-1, conv_outdim)
         pos = self.softmax(self.loca_fc1(x))
         ang = self.softmax(self.ang_fc1(x))
@@ -53,7 +53,7 @@ class Net(nn.Module):
 
 model=Net().cuda()
 criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), learning_rate)
+optimizer = torch.optim.SGD(model.parameters(), learning_rate)
 
 step=0
 
@@ -71,9 +71,9 @@ for i in range(episodes):
         image = Variable(torch.from_numpy(image.reshape([1, 1, resolution[0], resolution[1]]))).cuda()
         pos,ang=model(image)
         vars= state.game_variables
-        print(vars)
-        print(pos)
-        print(ang)
+        #print(vars)
+        #print(pos)
+        #print(ang)
 
         true_map=torch.FloatTensor([[0 for j in range(8)] for i in range(5)])
         true_ang=torch.FloatTensor([0 for i in range(72)])
@@ -91,7 +91,7 @@ for i in range(episodes):
         # Makes a random action and get remember reward.
         game.make_action(choice(actions),10)
 
-        step=+1
+        step=step+1
         info = {
             'loss': loss.data[0]
         }
