@@ -9,6 +9,9 @@ import torch.nn.functional as F
 import pdb
 import numpy as np
 import math
+from logger import Logger
+
+logger = Logger('./logs')
 
 game = DoomGame()
 game.load_config("./final+sc.cfg")
@@ -16,12 +19,12 @@ game.init()
 
 resolution = (200, 160)
 
-actions = [[True, False], [False, True]]
-episodes=100000
+actions = [[False,False, False]]
+episodes=1000000
 sleep_time=0.5
-learning_rate=0.00025
+learning_rate=1e-5
 conv_outdim=11040
-Likelihood_map_dim=50*80
+Likelihood_map_dim=5*8
 Likelihood_angel_dim=72
 
 def preprocess(img):
@@ -50,7 +53,9 @@ class Net(nn.Module):
 
 model=Net().cuda()
 criterion = nn.MSELoss()
-optimizer = torch.optim.SGD(model.parameters(), learning_rate)
+optimizer = torch.optim.Adam(model.parameters(), learning_rate)
+
+step=0
 
 for i in range(episodes):
     print("Episode #" + str(i + 1))
@@ -66,10 +71,13 @@ for i in range(episodes):
         image = Variable(torch.from_numpy(image.reshape([1, 1, resolution[0], resolution[1]]))).cuda()
         pos,ang=model(image)
         vars= state.game_variables
-        
-        true_map=torch.FloatTensor([[0 for j in range(80)] for i in range(50)])
+        print(vars)
+        print(pos)
+        print(ang)
+
+        true_map=torch.FloatTensor([[0 for j in range(8)] for i in range(5)])
         true_ang=torch.FloatTensor([0 for i in range(72)])
-        true_map[math.floor(vars[0]/100)][math.floor(vars[1]/100)]=1
+        true_map[math.floor(vars[1]*8/547)][math.floor(vars[0]*5/342)]=1
         true_map=Variable(true_map.view(-1,Likelihood_map_dim)).cuda()
 
         true_ang[math.floor(vars[2]/5)]=1
@@ -83,4 +91,10 @@ for i in range(episodes):
         # Makes a random action and get remember reward.
         game.make_action(choice(actions),10)
 
-        print(loss)
+        step=+1
+        info = {
+            'loss': loss.data[0]
+        }
+        for tag, value in info.items():
+            logger.scalar_summary(tag, value, step)
+        #print(loss)
