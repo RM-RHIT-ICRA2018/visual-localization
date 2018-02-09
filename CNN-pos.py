@@ -18,13 +18,13 @@ game = DoomGame()
 game.load_config("./final+sc.cfg")
 game.init()
 
-resolution = (60, 108)
+resolution = (30, 54)
 
 actions = [[False,False, False]]
 episodes=1000000
 sleep_time=0.5
-learning_rate=1e-3
-conv_outdim=19968
+learning_rate=1e-6
+conv_outdim=3200
 Likelihood_map_dim=5*8
 Likelihood_angel_dim=30
 
@@ -53,13 +53,13 @@ class Net(nn.Module):
         x = F.relu(self.conv2(x))
         x = x.view(-1, conv_outdim)
         pos = self.softmax(self.loca_fc1(x))
-        ang = self.softmax(self.ang_fc1(x))
-        return pos,ang
+        #ang = self.softmax(self.ang_fc1(x))
+        return pos#,ang
         
 
 model=Net().cuda()
 criterion = nn.MSELoss()
-optimizer = torch.optim.SGD(model.parameters(), learning_rate)
+optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 
 step=0
 
@@ -96,24 +96,24 @@ for i in range(episodes):
         #plt.show()
         
         input_image = Variable(torch.from_numpy(total_image.reshape([1, 3, resolution[0], resolution[1]*4]))).cuda()
-        pos,ang=model(input_image)
+        pos=model(input_image)
         
         #print(vars)
         #print(pos)
         #print(ang)
 
         true_map=torch.FloatTensor([[0 for j in range(8)] for i in range(5)])
-        true_ang=torch.FloatTensor([0 for i in range(30)])
-        print(vars[1]*8/547,',',vars[0]*5/342)
+        #true_ang=torch.FloatTensor([0 for i in range(30)])
+        #print(vars[1]*8/547,',',vars[0]*5/342)
         true_map[math.floor(vars[1]*8/547)][math.floor(vars[0]*5/342)]=1
         true_map=Variable(true_map.view(-1,Likelihood_map_dim)).cuda()
 
-        true_ang[math.floor(vars[2]/12)]=1
-        true_ang=Variable(true_ang).cuda()
+        #true_ang[math.floor(vars[2]/12)]=1
+        #true_ang=Variable(true_ang).cuda()
 
         loss_pos=criterion(pos,true_map)
-        loss_ang=criterion(ang,true_ang)
-        loss=loss_pos+loss_ang
+        #loss_ang=criterion(ang,true_ang)
+        loss=loss_pos#+loss_ang
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -124,5 +124,5 @@ for i in range(episodes):
         }
         for tag, value in info.items():
             logger.scalar_summary(tag, value, step)
-        print(loss_pos,loss_ang)
+        print(loss)
         
