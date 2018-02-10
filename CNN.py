@@ -9,10 +9,10 @@ import torch.nn.functional as F
 import pdb
 import numpy as np
 import math
-from logger import Logger
+#from logger import Logger
 import matplotlib.pyplot as plt
 
-logger = Logger('./logs')
+#logger = Logger('./logs')
 
 game = DoomGame()
 game.load_config("./final+sc.cfg")
@@ -118,11 +118,11 @@ for i in range(episodes):
         loss.backward()
         optimizer.step()
 
-        step=step+1
-        info = {
-            'loss': loss.data[0]
-        }
-        for tag, value in info.items():
-            logger.scalar_summary(tag, value, step)
+        #step=step+1
+        #info = {
+        #    'loss': loss.data[0]
+        #}
+        #for tag, value in info.items():
+        #    logger.scalar_summary(tag, value, step)
         print(loss_pos,loss_ang)
         
