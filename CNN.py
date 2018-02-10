@@ -1,11 +1,12 @@
-from vizdoom import *
-from random import choice
-from time import sleep
-import skimage.color, skimage.transform
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import torch.nn.functional as F
+from vizdoom import *
+from random import choice
+from time import sleep
+import skimage.color, skimage.transform
+
 import pdb
 import numpy as np
 import math
